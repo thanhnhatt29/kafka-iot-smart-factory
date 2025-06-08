@@ -1,0 +1,114 @@
+networks:
+  kafka-net:
+    driver: bridge
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
+    hostname: zookeeper
+    networks:
+      - kafka-net
+    # ports:
+    #   - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka1:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka1
+    hostname: kafka1
+    networks:
+      - kafka-net
+    ports:
+      - "9092:9092" # Cổng EXTERNAL cho client bên ngoài
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      # --- Listeners ---
+      # Chỉ định broker lắng nghe trên các cổng nào bên trong container
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      # Quảng bá listeners: INTERNAL dùng hostname, EXTERNAL dùng localhost (cho máy host)
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka1:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # --- Cấu hình cluster ---
+      # KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      # KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      # KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      # KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+  kafka2:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka2
+    hostname: kafka2
+    networks:
+      - kafka-net
+    ports:
+      - "9093:9092" # Cổng EXTERNAL cho client bên ngoài (ánh xạ từ 9092 nội bộ)
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka2:29092,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      # KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      # KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      # KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+  kafka3:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka3
+    hostname: kafka3
+    networks:
+      - kafka-net
+    ports:
+      - "9094:9092" # Cổng EXTERNAL cho client bên ngoài (ánh xạ từ 9092 nội bộ)
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka3:29092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      # KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      # KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      # KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+  
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:7.0.1
+    container_name: kafka-connect
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+    ports:
+      - "8083:8083"
+    networks:
+      - kafka-net
+    environment:
+      CONNECT_REST_PORT: 8083
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_BOOTSTRAP_SERVERS: kafka1:29092,kafka2:29092,kafka3:29092
+      CONNECT_GROUP_ID: connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: connect-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+      CONNECT_PLUGIN_PATH: /usr/share/java
+    volumes:
+      - ./connect-data:/data
+
