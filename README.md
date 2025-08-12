@@ -15,44 +15,53 @@
 ### 1. Start Kafka cluster
 ```bash
 docker-compose up -d
-```
+````
 
-### 2. Create Kafka topics using dockerized shell script
+### 2\. Create Kafka topics using dockerized shell script
+
 ```bash
 bash kafka/kafka-setup.sh
 ```
 
-### 3. Start producers (multiple instances)
+### 3\. Start producers (multiple instances)
+
 Run multiple simulated IoT producers with a single Python script:
+
 ```bash
 python run_multiple_producers.py --count 6
 ```
+
 > Replace `--count` with how many producers you want per sensor type (e.g., 6 = 18 total producers).
 
-### 4. Start consumers
+### 4\. Start consumers
+
 ```bash
-python consumer/storage_consumer.py        # Save messages to CSV
-python consumer/anomaly_detector.py        # Detect high temperatures
+python consumer/storage_consumer.py      # Save messages to CSV
+python consumer/anomaly_detector.py      # Detect high temperatures
 ```
 
-### 5. Live data visualization (real-time plot)
+### 5\. Live data visualization (real-time plot)
+
 ```bash
 python visualization/live_plot_viewer.py
 ```
+
 > This will display a single dynamic plot that shows temperature, humidity, and vibration over time.
 
----
+-----
 
 ## 🗃️ Optional: PostgreSQL Integration
+
 To store all messages in a PostgreSQL database:
 
-1. Ensure PostgreSQL service is running (you can add to docker-compose if needed)
-2. Use the schema in `db/init.sql`
-3. Modify `storage_consumer.py` to insert data into the database
+1.  Ensure PostgreSQL service is running (you can add to docker-compose if needed)
+2.  Use the schema in `db/init.sql`
+3.  Modify `storage_consumer.py` to insert data into the database
 
----
+-----
 
 ## 📁 Project Structure
+
 ```
 iot-smart-factory/
 ├── docker-compose.yml
@@ -62,10 +71,10 @@ iot-smart-factory/
 ├── producer/
 │   ├── temperature_producer.py
 │   ├── humidity_producer.py
-│   ├── vibration_producer.py
+│   └── vibration_producer.py
 ├── consumer/
 │   ├── storage_consumer.py
-│   ├── anomaly_detector.py
+│   └── anomaly_detector.py
 ├── utils/
 │   └── data_simulation.py
 ├── visualization/
@@ -78,38 +87,38 @@ iot-smart-factory/
 
 ## Problems
 
-### 🧩 **1. Cấu hình và Kiến trúc Cơ bản**
+### 🧩 **1. Basic Configuration and Architecture**
 
-| Chủ đề                      | Mô tả vấn đề                                                    | Gợi ý cải thiện                                                                              |
-| --------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| **Replication Factor**      | Demo có nói đến replication factor = 3, nhưng cấu hình lại là 2 | Cần đồng bộ cấu hình với tài liệu hoặc giải thích rõ lý do chọn RF=2                         |
-| **acks (acknowledgements)** | Chưa áp dụng acks trong Producer                                | Áp dụng `acks=all` để đảm bảo tính toàn vẹn dữ liệu trong production                         |
-| **Idempotent Producer**     | Chưa bật `enable.idempotence=true`                              | Tránh ghi trùng trong trường hợp retry                                                       |
-| **Offset Commit**           | Chưa thấy rõ cách commit offset                                 | Xác định rõ `enable.auto.commit` hay commit thủ công, cấu hình chính xác `auto_offset_reset` |
-| **auto\_offset\_reset**     | Thiếu hướng dẫn đọc dữ liệu từ đầu                              | Cần thêm cấu hình `auto_offset_reset='earliest'` trong Consumer                              |
+| Topic                   | Problem Description                                                              | Improvement Suggestion                                                                                             |
+| ----------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Replication Factor** | The demo mentions a replication factor of 3, but the configuration is set to 2.  | The configuration should be synchronized with the documentation, or the reason for choosing RF=2 should be clearly explained. |
+| **acks (acknowledgements)** | `acks` are not applied in the Producer.                                          | Apply `acks=all` to ensure data integrity in production.                                                           |
+| **Idempotent Producer** | `enable.idempotence=true` is not enabled.                                        | Prevents duplicate writes in case of retries.                                                                      |
+| **Offset Commit** | The offset commit method is not clear.                                           | Clearly define whether to use `enable.auto.commit` or manual commit, and correctly configure `auto_offset_reset`.  |
+| **auto\_offset\_reset** | Lacks guidance on reading data from the beginning.                               | Need to add the `auto_offset_reset='earliest'` configuration in the Consumer.                                      |
 
----
+-----
 
-### 📚 **2. Tính năng nâng cao chưa triển khai**
+### 📚 **2. Advanced Features Not Implemented**
 
-| Chủ đề                | Mô tả vấn đề              | Gợi ý cải thiện                                                              |
-| --------------------- | ------------------------- | ---------------------------------------------------------------------------- |
-| **Kafka Streams API** | Có đề cập nhưng chưa demo | Tạo pipeline xử lý dữ liệu streaming: map/filter/aggregate                   |
-| **ksqlDB**            | Chưa sử dụng              | Cần demo ksqlDB để xử lý SQL-like trên Kafka topics                          |
-| **Kafka 4.0 & KRaft** | Chưa nghiên cứu           | Tìm hiểu kiến trúc không dùng Zookeeper (KRaft mode), phù hợp Kafka 4.x      |
-| **Schema Registry**   | Chưa đề cập               | Áp dụng khi sử dụng Avro/Protobuf để kiểm soát schema giữa Producer/Consumer |
-| **Fault Tolerance**   | Thiếu mô tả               | Bổ sung retry, backoff, circuit breaker, dead letter topic                   |
+| Topic                 | Problem Description             | Improvement Suggestion                                                                      |
+| --------------------- | ------------------------------- | ------------------------------------------------------------------------------------------- |
+| **Kafka Streams API** | Mentioned but not demonstrated. | Create a streaming data processing pipeline: map/filter/aggregate.                          |
+| **ksqlDB** | Not used.                       | Need to demo ksqlDB for SQL-like processing on Kafka topics.                                |
+| **Kafka 4.0 & KRaft** | Not researched.                 | Research the Zookeeper-less architecture (KRaft mode), suitable for Kafka 4.x.              |
+| **Schema Registry** | Not mentioned.                  | Apply when using Avro/Protobuf to control schemas between Producer/Consumer.                |
+| **Fault Tolerance** | Description is missing.         | Add retry, backoff, circuit breaker, dead letter topic.                                     |
 
----
+-----
 
-### 🔐 **3. Bảo mật và Quản lý**
+### 🔐 **3. Security and Management**
 
-| Chủ đề                                        | Mô tả vấn đề           | Gợi ý cải thiện                                                                                 |
-| --------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------- |
-| **Security (Authentication & Authorization)** | Chưa đề cập            | Áp dụng SSL/SASL, ACLs trong Kafka để bảo vệ dữ liệu                                            |
-| **Monitoring & Alerting**                     | Chưa tích hợp          | Kết nối Kafka với Prometheus & Grafana, hoặc dùng Confluent Control Center để theo dõi hệ thống |
-| **Log file**                                  | Chưa giám sát file log | Thiết lập log rotation, lưu log ra centralized system như ELK hoặc Loki                         |
-| **Retry & Error Handling**                    | Chưa có chiến lược     | Thiết lập `retries`, `retry.backoff.ms`, xử lý lỗi gửi/nhận hoặc consumer lag                   |
-| **Connection Timeout**                        | Thiếu cấu hình         | Cần cấu hình `request.timeout.ms`, `session.timeout.ms`, `max.poll.interval.ms` phù hợp         |
+| Topic                                 | Problem Description           | Improvement Suggestion                                                                                               |
+| ------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Security (Authentication & Authorization)** | Not mentioned.                | Apply SSL/SASL, ACLs in Kafka to protect data.                                                                       |
+| **Monitoring & Alerting** | Not integrated.               | Connect Kafka with Prometheus & Grafana, or use Confluent Control Center for system monitoring.                      |
+| **Log file** | Log files are not monitored.  | Set up log rotation, save logs to a centralized system like ELK or Loki.                                             |
+| **Retry & Error Handling** | No strategy in place.         | Configure `retries`, `retry.backoff.ms`, and handle send/receive errors or consumer lag.                               |
+| **Connection Timeout** | Configuration is missing.     | Need to properly configure `request.timeout.ms`, `session.timeout.ms`, and `max.poll.interval.ms`.                   |
 
----
+-----
